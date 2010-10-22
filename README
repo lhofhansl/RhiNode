@@ -31,3 +31,9 @@ For integration with Rhino a bunch of files where copied from the Rhino
 distribution and slightly modified. The changed are packaged in a separate
 jar and can used with standard Rhino installation.
 You need the latest Rhino 1.7r3, though (a pristine jar is included).
+
+To get started:
+#build/install
+ant -Ddist=<installDir>
+#run a simple http server
+<installDir>/rhinode example/http-1.1-content-length.js
