@@ -1,0 +1,4 @@
+#!/bin/sh
+export CLASSPATH=@LIB@/rhinode.jar:@LIB@/js.jar:@LIB@/jline.jar
+#exec java -Xmx128m -XX:+UseCompressedOops -XX:+DoEscapeAnalysis org.rhinode.Main $@
+exec java -Xmx128m -XX:+UseCompressedOops org.rhinode.Main $@

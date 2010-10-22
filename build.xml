@@ -1,0 +1,58 @@
+<project name="rhinode" default="dist" basedir=".">
+    <description>
+    </description>
+  <!-- set global properties for this build -->
+  <property name="src" location="src"/>
+  <property name="build" location="build"/>
+  <property name="dist"  location="dist"/>
+  <property name="version" value="0.1"/>
+
+  <target name="init">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <mkdir dir="${build}"/>
+  </target>
+
+  <target name="compile" depends="init"
+        description="compile the source " >
+    <javac srcdir="${src}" destdir="${build}">
+      <classpath location="lib/js.jar"/>
+    </javac>
+    <copy file="src/rhinode.properties" toDir="${build}">
+      <filterset>
+        <filter token="MODULES" value="${dist}/modules"/>
+        <filter token="VERSION" value="${version}"/>
+      </filterset>
+    </copy>
+  </target>
+
+  <target name="dist" depends="compile"
+        description="generate the distribution" >
+    <!-- Create the distribution directory -->
+    <mkdir dir="${dist}/lib"/>
+
+    <jar jarfile="${dist}/lib/rhinode.jar">
+      <fileset dir="${build}"/>
+      <fileset dir="src" includes="**/*.js" />
+    </jar>
+    <copy todir="${dist}/lib">
+      <fileset dir="lib"/>
+    </copy>
+    <copy todir="${dist}/modules">
+      <fileset dir="modules"/>
+    </copy>
+    <copy file="script/rhinode" todir="${dist}">
+      <filterset>
+        <filter token="LIB" value="${dist}/lib"/>
+      </filterset>
+    </copy>
+    <chmod file="${dist}/rhinode" perm="+x"/>
+  </target>
+
+  <target name="clean"
+        description="clean up" >
+    <!-- Delete the ${build} and ${dist} directory trees -->
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+  </target>
+</project>

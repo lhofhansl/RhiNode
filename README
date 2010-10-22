@@ -1,0 +1,33 @@
+RhiNode provides a Javascript API around Java's NIO library.
+
+This was bourne out of frustration over claims that NIO is slow and does
+not scale and the fun in functional programming.
+
+The API itself is very heavily inspired by node.js. Where feasible and
+sensible the API is compatible to node.js.
+
+Common.js type modules are used to encapulate functionality.
+
+The current abstractions include:
+o events
+o fs (filesystem)
+o net
+o http
+
+No serious attempt towards optimization have been made, yet. For example the
+http module only uses the "public" net API with no shortcuts.
+The main event loop is currently implemented in Javascript as well.
+
+The only tight loop implemented directly in Java is the scanning of the
+network buffers for line-endings and http headers.
+
+Since NIO does not provide selectable FileChannel, files are currently
+treated as streams (channels) that are alway readable and writable.
+
+This is version 0.1, it works pretty for me and performs pretty well.
+But there are a bunch of hacks and shortcuts that need to be addressed.
+
+For integration with Rhino a bunch of files where copied from the Rhino
+distribution and slightly modified. The changed are packaged in a separate
+jar and can used with standard Rhino installation.
+You need the latest Rhino 1.7r3, though (a pristine jar is included).
