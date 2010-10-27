@@ -1,59 +1,9 @@
 var event = require('event');
 importPackage(org.rhinode);
+importPackage(java.nio);
 
-// Simulate selectable files. Java NIO does not provide a selectable FileChannel.
-// Basically FileChannels are always considered to be readable and writable.
-// Just implement enough of the SelectionKey interface for our usage.
-
-var OP_READ = 1;
-var OP_WRITE = 2;
-
-function Key(channel, ops, supportedops, attachment) 
-{
-    this.filechannel = channel;
-    this.attached = attachment;
-    this.ops = ops;
-    this.cancelled = false;
-    this.supportedops = supportedops;
-}
-Key.prototype.isValid = function() {
-    return !this.cancelled;
-}
-Key.prototype.isReadable = function() {
-    return (this.ops & OP_READ) !== 0;
-}
-Key.prototype.isWritable = function() {
-    return (this.ops & OP_WRITE) !== 0;
-}
-Key.prototype.channel = function() {
-    return this.filechannel;
-}
-Key.prototype.attachment = function() {
-    return this.attached;
-}
-Key.prototype.readyOps = function() {
-    return this.ops;
-}
-Key.prototype.interestOps = function(ops) {
-    if(typeof ops === "number") {
-        if (ops === 0) {
-            this.selector.remove(this);
-        } else if (this.ops === 0) {
-            if ((ops | this.supportedops) !== this.supportedops) throw "Unsupported Operation";
-            this.selector.add(this);
-        }
-        this.ops = ops;
-    }
-    return this.ops;
-}
-Key.prototype.cancel = function() {
-    this.selector.remove(this);
-    this.cancelled = true;
-}
-Key.prototype.close = function() {
-    this.filechannel.close();
-    this.cancel();
-}
+// Java NIO does not provide a selectable FileChannel.
+// FileChannels are always considered to be readable and writable.
 
 //// Stream ////
 
@@ -79,11 +29,11 @@ ReadStream.prototype.removeEventListener = function(ev) {
 ReadStream.prototype.on = ReadStream.prototype.addEventListener;
 
 ReadStream.prototype.pause = function() {
-    this.key.interestOps(this.key.interestOps() & ~OP_READ);
+    this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_READ);
 }
 
 ReadStream.prototype.resume = function() {
-    this.key.interestOps(this.key.interestOps() | OP_READ);
+    this.key.interestOps(this.key.interestOps() | SelectionKey.OP_READ);
 };
 
 ReadStream.prototype.close = function() {
@@ -103,11 +53,11 @@ function WriteStream(key) {
 }
 
 WriteStream.prototype.pause = function() {
-    this.key.interestOps(this.key.interestOps() & ~OP_WRITE);
+    this.key.interestOps(this.key.interestOps() & ~SelectionKey.OP_WRITE);
 }
 
 WriteStream.prototype.resume = function() {
-    this.key.interestOps(this.key.interestOps() | OP_WRITE);
+    this.key.interestOps(this.key.interestOps() | SelectionKey.OP_WRITE);
 };
 
 WriteStream.prototype.write = function(data,enc) {
@@ -120,7 +70,7 @@ WriteStream.prototype.write = function(data,enc) {
         return true;
 
     // couldn't write the entire buffer, try again when the socket is ready for writing
-    this.key.interestOps(OP_WRITE);
+    this.key.interestOps(SelectionKey.OP_WRITE);
     return false;
 }
 
@@ -183,11 +133,26 @@ function copyStream(readStream, writeStream) {
         });
 };
 
+// Don't use this with big files :)
+function readFileSync(path, enc) {
+    var channel = new java.io.FileInputStream(path).getChannel();
+    var out = ByteBuffer.allocate(channel.size());
+    while(channel.read(out) > 0);
+    out.flip();
+    if (enc) {
+        print(enc);
+        var decoder = java.nio.charset.Charset.forName(enc).newDecoder();
+        var cout = CharBuffer.allocate(out.remaining()*decoder.maxCharsPerByte());
+        decoder.decode(out,cout,true);
+        return cout.flip().toString();
+    }
+    return out;
+}
+
 function createReadStream(path) {
     var channel = new java.io.FileInputStream(path).getChannel();
     var myHandler = Object.create(handler);
-    var key = new Key(channel, 0, OP_READ, myHandler);
-    registerFile(key);
+    var key = registerFile(channel, SelectionKey.OP_READ, myHandler);
     myHandler.readStream = new ReadStream(key);
     return myHandler.readStream;
 }
@@ -195,8 +160,7 @@ function createReadStream(path) {
 function createWriteStream(path) {
     var channel = new java.io.FileOutputStream(path).getChannel();
     var myHandler = Object.create(handler);
-    var key = new Key(channel, 0, OP_WRITE, myHandler);
-    registerFile(key);
+    var key = registerFile(channel, SelectionKey.OP_WRITE, myHandler);
     myHandler.writeStream = new WriteStream(key);
     return myHandler.writeStream;
 }
@@ -204,5 +168,4 @@ function createWriteStream(path) {
 exports.createReadStream = createReadStream;
 exports.createWriteStream = createWriteStream;
 exports.copyStream = copyStream;
-exports.OP_READ = OP_READ;
-exports.OP_WRITE = OP_WRITE;
+exports.readFileSync = readFileSync;

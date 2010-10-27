@@ -11,6 +11,7 @@ import java.nio.channels.WritableByteChannel;
  * this pool. When the pool is exhausted we create a new one.
  *
  * The memory is not reused, hence downstream code can hold on the passed buffers.
+ * Is allows for one BytePool to be shared by many streams.
  */
 public class BytePool {
     private ByteBuffer pool = null;

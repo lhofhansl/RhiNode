@@ -191,12 +191,16 @@ Server.prototype.listen = function(port, host, queue) {
         this.ssc.socket().bind(new java.net.InetSocketAddress(port), queue);
     var myHandler = Object.create(handler,{server:{value:this}});
     register(this.ssc, SelectionKey.OP_ACCEPT,myHandler);
-};
+}
 
 Server.prototype.close = function() {
     this.ssc.close();
     wakeup();
-};
+}
+
+Server.prototype.setSecure = function(creds) {
+    // TODO
+}
 
 function createConnection(port, host, cb) {
     return new Socket().connect(port,host,cb);

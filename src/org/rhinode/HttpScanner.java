@@ -69,8 +69,6 @@ public class HttpScanner {
             } else {
                 int i = line.indexOf(':');
                 if (i > 0) {
-                    //String key = line.substring(0,i);
-                    //String newValue = line.substring(i+1).trim().toLowerCase();
                     String key = line.substring(0,i).toLowerCase();
                     String newValue = line.substring(i+1).trim();
                     String oldValue = headers.get(key);

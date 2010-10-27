@@ -7,7 +7,6 @@ import java.nio.*;
 
 // Outputstream backed by a growing ByteBuffer
 public class ByteBufferOutputStream extends OutputStream {
-    private CharsetDecoder decoder = null;
     private ByteBuffer buffer;
     private int max;
 
@@ -16,12 +15,6 @@ public class ByteBufferOutputStream extends OutputStream {
         this.max = max;
     }
     
-    public void setEncoding(String enc) {
-        decoder = Charset.forName(enc).newDecoder();
-        decoder.onMalformedInput(CodingErrorAction.IGNORE);
-        decoder.onUnmappableCharacter(CodingErrorAction.IGNORE);
-    }
-
     @Override
     public void write(byte[] b, int off, int len) {
         ensureLen(len);
@@ -72,7 +65,7 @@ public class ByteBufferOutputStream extends OutputStream {
     }
 
     // returns # of bytes that still need to be sent
-    public int writeTo(WritableByteChannel channel) throws IOException {
+    public int writeTo(WritableByteChannel channel) {
         buffer.flip();
         try {
         int n = channel.write(buffer);

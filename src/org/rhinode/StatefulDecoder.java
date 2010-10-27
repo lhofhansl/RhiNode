@@ -35,6 +35,7 @@ public class StatefulDecoder {
         }
         // decode as much of the bytes as we can
         // note that the buffer may end with partial multibyte characters
+        // should we hold on to the char buffer and reuse it?
         CharBuffer out = CharBuffer.allocate((int)(b.remaining()*decoder.maxCharsPerByte()));
         decoder.decode(b,out,false);
         if (b.hasRemaining()) {

@@ -15,8 +15,8 @@ var nextTick;
         sel.wakeup();
     }
     
-    registerFile = function(key) {
-        filesel.register(key);
+    registerFile = function(channel,ops,handler) {
+        return filesel.register(channel,ops,handler);
     }
 
     register = function(channel, ops, handler) {
@@ -54,18 +54,71 @@ var nextTick;
     importPackage(java.util);
     importClass(java.lang.System);
 
+    // Key and FileSelector "simulate" selectable file channels
+    function Key(channel, supportedops, selector, attachment) 
+    {
+        this.filechannel = channel;
+        this.attached = attachment;
+        this.ops = 0;
+        this.cancelled = false;
+        this.supportedops = supportedops;
+        this.selector = selector;
+    }
+    Key.prototype = {
+        isValid: function() {
+            return !this.cancelled;
+        },
+        isReadable: function() {
+            return (this.ops & SelectionKey.OP_READ) !== 0;
+        },
+        isWritable: function() {
+            return (this.ops & SelectionKey.OP_WRITE) !== 0;
+        },
+        channel: function() {
+            return this.filechannel;
+        },
+        attachment: function() {
+            return this.attached;
+        },
+        readyOps: function() {
+            return this.ops;
+        },
+        interestOps: function(ops) {
+            if(typeof ops === "number") {
+                if (ops === 0) {
+                    this.selector.remove(this);
+                } else if (this.ops === 0) {
+                    if ((ops | this.supportedops) !== this.supportedops) throw "Unsupported Operation";
+                    this.selector.add(this);
+                }
+                this.ops = ops;
+            }
+            return this.ops;
+        },
+        cancel: function() {
+            this.selector.remove(this);
+            this.cancelled = true;
+        },
+        close: function() {
+            this.filechannel.close();
+            this.cancel();
+        }
+    };
+
     function FileSelector() {}
-    FileSelector.prototype.register = function(key) {
-        if (!key.channel().isOpen()) throw "Channel is closed";
-        key.selector = this;
-    }
-    FileSelector.prototype.add = function(key) {
-        files.push(key);
-        wakeup();
-    }
-    FileSelector.prototype.remove = function(key) {
-        var i = files.indexOf(key);
-        if(i>=0) files.splice(i,1);
+    FileSelector.prototype = {
+        register: function(channel,ops,handler) {
+            if (!channel.isOpen()) throw "Channel is closed";
+            return new Key(channel, ops, this, handler);
+        },
+        add: function(key) {
+            files.push(key);
+            wakeup();
+        },
+        remove: function(key) {
+            var i = files.indexOf(key);
+            if(i>=0) files.splice(i,1);
+        },
     }
 
     var sel = Selector.open(); 
@@ -81,6 +134,8 @@ var nextTick;
     var timers = 0;
 
     var expireTimer = sync(function() {
+        // expired timer do not actually run the callback
+        // but place it in a queue to be picked up by the main loop
         timerCBs.push(this.data);
         wakeup();
         },timer);
@@ -108,11 +163,11 @@ var nextTick;
         if (files.length>0) wakeup();
     }
 
-    var LOW_RES = 1000;
+    var LOW_RES = 1000; // resolution for low-res timers (i.e. socket idle checks)
     var nextIdleCheck = 0;
 
     // move to Java?
-    function handleIdle(keys) {
+    function handleIdleSockets(keys) {
         var t = System.currentTimeMillis();
         if (nextIdleCheck <= t && !keys.isEmpty()) {
             var i = keys.iterator();
@@ -151,7 +206,7 @@ var nextTick;
     loop = function() {
         while (!sel.keys().isEmpty() || timers > 0 || files.length > 0) {
             sel.select(LOW_RES);
-            handleIdle(sel.keys());
+            handleIdleSockets(sel.keys());
             handleSockets(sel.selectedKeys());
             handleFiles();
             handleTimers();
