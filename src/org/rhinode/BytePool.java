@@ -23,7 +23,7 @@ public class BytePool {
      */
     private int pre() {
         if (pool==null || pool.remaining() < MIN) {
-            pool = java.nio.ByteBuffer.allocateDirect(SIZE);
+            pool = java.nio.ByteBuffer.allocate(SIZE);
         }
         return pool.position();
     }
