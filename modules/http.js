@@ -157,16 +157,11 @@ function parseState(connector,socket) {
 // pump network buffers through the http/1.1 parser
 function pumpReader(state, buffer, onReset) {
     // drain the buffer by parsing requests
-    do {
-        var r = buffer.remaining();
-        if(state.send(buffer)) {
-            onReset && onReset();
-            // "reset" the parser and try the rest of the buffer for the next request
-            state.next();
-        }
-        // continue until buffer is drained, or we cannot make any progress
-        // in both cases we should wait for the next buffer to arrive from the network
-    } while(buffer.hasRemaining() && buffer.remaining() < r);
+    while (buffer.remaining() && state.send(buffer)) {
+        onReset && onReset();
+        // "reset" the parser and try the rest of the buffer for the next request
+        state.next();
+    }
 }
 
 function HttpWriter(method,url,headers,httpVersion,sock,req) {
@@ -239,17 +234,17 @@ HttpWriter.prototype.writeHead = function(statusCode, hdrs) {
 
 // treat headers for correct http/1.1 behavior
 HttpWriter.prototype._augmentHeaders = function(hdrs) {
-    var contentLength,close,connection,transferEncoding;
+    var contentLength=false,close=false,connection=false,transferEncoding=false;
     //hdrs = Object.create(hdrs);
     for(let h in hdrs) {
-        if(contentLengthRegex.test(h)) {
-            contentLength = hdrs[h];
-        } else if(transferEncodingRegex.test(h)) {
-            transferEncoding = true;
-            this.chunked = chunkedRegex.test(hdrs[h]);
-        } else if(connectionRegex.test(h)) {
+        if(!connection && connectionRegex.test(h)) {
             connection = true;
             close = closeRegex.test(hdrs[h]);
+        } else if(!contentLength && contentLengthRegex.test(h)) {
+            contentLength = true;
+        } else if(!transferEncoding && transferEncodingRegex.test(h)) {
+            transferEncoding = true;
+            this.chunked = chunkedRegex.test(hdrs[h]);
         }
     }
     if (!this.req || this.req.isKeepAlive()) {
