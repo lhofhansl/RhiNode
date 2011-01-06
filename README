@@ -1,3 +1,10 @@
+RhiNode should be considered stale. Please check out RhiNodeII (also on GitHub).
+RhiNodeII started from scratch and is sufficiently different from RhiNode to warrant a new project.
+
+The RhiNode repository will be deleted soon.
+
+----
+
 RhiNode provides a Javascript API around Java's NIO library.
 
 This was bourne out of frustration over claims that NIO is slow and does
